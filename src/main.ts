@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const presenceCache: { [key: string]: any } = {};
 
 if (process.platform === "linux") console.warn("Linux support might be a bit wonky, I've tried doing testing on my own system.\nPlease do open a Issue on GitHub if you have any issues with Bloxtivity!\nI will try my best to help you out.\n\thttps://github.com/WaviestBalloon/Bloxtivity/issues\n");
 if (process.platform === "darwin") console.warn("Mac support has not been tested by me at all!\nPlease do open a Issue on GitHub if you have any issues with Bloxtivity!\n\thttps://github.com/WaviestBalloon/Bloxtivity/issues\n");
@@ -25,7 +26,6 @@ let axiosClient = axios.create({
 });
 async function generateCSRFToken() {
 	let CSRFToken: string = null;
-
 	await axiosClient.post("https://auth.roblox.com/v2/logout").catch(err => {
 		if (err.response?.status === 403) {
 			CSRFToken = err.response.headers["x-csrf-token"];
@@ -35,6 +35,7 @@ async function generateCSRFToken() {
 	});
 	return CSRFToken;
 }
+console.log("Generating CSRF token");
 axiosClient = axios.create({
 	headers: {
 		"Content-Type": "application/json",
@@ -61,6 +62,7 @@ emitter.on("websocketReady", async (data) => {
 });
 emitter.on("presenceChanged", async (userId) => {
 	console.log(`Presence changed for user ${userId}`);
+	const cached = presenceCache[userId];
 	
 	console.log(`Getting user info for user ${userId}`);
 	const userInfo = await axiosClient.get(`https://users.roblox.com/v1/users/${userId}`);
@@ -68,6 +70,7 @@ emitter.on("presenceChanged", async (userId) => {
 	const presence = await axiosClient.post(`https://presence.roblox.com/v1/presence/users`, JSON.stringify({
 		"userIds": [userId]
 	}));
+	if (cached?.lastLocation === presence.data.userPresences[0].lastLocation && cached?.presenceType === presence.data.userPresences[0].userPresenceType) return console.log(`Presence for user ${userId} has not changed, ignoring...`);
 	console.log(`Resolving icon for user ${userId}`);
 	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=100x100&format=Png&isCircular=false`);
 	console.log(`Downloading icon for user ${userId}`);
@@ -98,6 +101,11 @@ emitter.on("presenceChanged", async (userId) => {
 		console.log(gameInfo.data);
 	}*/
 	let message = null;
+	console.log(`Last: ${presence.data.userPresences[0].lastLocation}`);
+	presenceCache[userId] = {
+		lastLocation: presence.data.userPresences[0].lastLocation,
+		presenceType: presence.data.userPresences[0].userPresenceType,
+	};
 	if (presence.data.userPresences[0].userPresenceType === 2) {
 		message = `${userInfo.data?.displayName ? userInfo.data?.displayName : userInfo.data.name} is now playing ${presence.data.userPresences[0].lastLocation}`;
 	} else if (presence.data.userPresences[0].userPresenceType === 3) {
