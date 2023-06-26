@@ -113,6 +113,13 @@ emitter.on("presenceChanged", async (userId) => {
 				appName: "Bloxtivity",
 				//actions: ["Join game", "View game page"],
 			});
+		} else {
+			notifier.notify({
+				title: `${userInfo.data.name} ${location}`,
+				message: message,
+				sound: false,
+				icon: join(__dirname, "..", "temp", `${userId}.png`),
+			});
 		}
 	} else {
 		if (process.platform === "linux") {
@@ -120,6 +127,13 @@ emitter.on("presenceChanged", async (userId) => {
 				title: `${userInfo.data.name} ${location}`,
 				icon: join(__dirname, "..", "temp", `${userId}.png`),
 				appName: "Bloxtivity",
+			});
+		} else {
+			notifier.notify({
+				title: `${userInfo.data.name} ${location}`,
+				message: message,
+				sound: false,
+				icon: join(__dirname, "..", "temp", `${userId}.png`),
 			});
 		}
 	}
