@@ -1,2 +1,2 @@
-# BloxtivityToast
-Get OS notifications about your friend's activity on Roblox so you can join them anytime
+# Bloxtivity
+OS notifications about your friend's activity on Roblox! Works on Windows and Linux.
