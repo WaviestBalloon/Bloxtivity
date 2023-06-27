@@ -17,3 +17,11 @@ TODO
 2. Copy the `.env.example` file to `.env` and replace `REPLACE_THIS_WITH_YOUR_ENTIRE_TOKEN` with your `.ROBLOSECURITY` cookie token.
 3. Run `npm run build` to build the Bloxtivity.
 4. Run `npm run bloxtivity` to start Bloxtivity.
+
+## To-do list
+
+- [x] Improve CSRF token generation and handling
+- [ ] Do not display profile picture if it's too large to be handled by Windows
+- [ ] Join game instance button
+- [ ] View game page button
+- [ ] Make cache useful/Compare checksums
