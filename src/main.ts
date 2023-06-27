@@ -26,12 +26,13 @@ let axiosClient = axios.create({
 });
 async function generateCSRFToken() {
 	let CSRFToken: string = null;
+	console.log(axiosClient.defaults.headers);
 	await axiosClient.post("https://auth.roblox.com/v2/logout").catch(err => {
 		if (err.response?.status === 403) {
 			CSRFToken = err.response.headers["x-csrf-token"];
 			return;
 		}
-		throw new Error(`An unknown error occurred while generating a CSRF token\nDetails: ${err.response.data.errors[0].message}`)
+		console.warn(`An unknown error occurred while generating a CSRF token\nDetails: ${err.response.data.errors[0].message}`)
 	});
 	return CSRFToken;
 }
@@ -50,7 +51,15 @@ setInterval(async () => {
 		headers: {
 			"Content-Type": "application/json",
 			"Accept": "application/json",
-			"X-CSRF-TOKEN": await generateCSRFToken(),
+			".ROBLOSECURITY": `.ROBLOSECURITY=${process.env.TOKEN}`,
+		}
+	});
+	let CSRFToken: string = await generateCSRFToken();
+	axiosClient = axios.create({
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json",
+			"X-CSRF-TOKEN": CSRFToken,
 			".ROBLOSECURITY": `.ROBLOSECURITY=${process.env.TOKEN}`,
 		}
 	});
@@ -64,13 +73,13 @@ emitter.on("presenceChanged", async (userId) => {
 	console.log(`Presence changed for user ${userId}`);
 	const cached = presenceCache[userId];
 	
-	console.log(`Getting user info for user ${userId}`);
-	const userInfo = await axiosClient.get(`https://users.roblox.com/v1/users/${userId}`);
 	console.log(`Getting presence info for user ${userId}`);
 	const presence = await axiosClient.post(`https://presence.roblox.com/v1/presence/users`, JSON.stringify({
 		"userIds": [userId]
 	}));
 	if (cached?.lastLocation === presence.data.userPresences[0].lastLocation && cached?.presenceType === presence.data.userPresences[0].userPresenceType) return console.log(`Presence for user ${userId} has not changed, ignoring...`);
+	console.log(`Getting user info for user ${userId}`);
+	const userInfo = await axiosClient.get(`https://users.roblox.com/v1/users/${userId}`);
 	console.log(`Resolving icon for user ${userId}`);
 	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=100x100&format=Png&isCircular=false`);
 	console.log(`Downloading icon for user ${userId}`);
