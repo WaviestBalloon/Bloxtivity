@@ -17,7 +17,7 @@ export async function initaliseWebsocketConnection(token: string) {
 		throw new Error(`An error occurred while attempting to connect to the Websocket\nDetails: ${err}`);
 	}
 
-	setTimeout(() => {
+	setTimeout(() => { // Refresh the websocket every 6 hours
 		refreshing = true;
 		socket.close();
 	}, 21600000)
@@ -29,7 +29,7 @@ export async function initaliseWebsocketConnection(token: string) {
 		socket.send(`{"protocol":"json","version":1}`); // DO NOT REMOVE THAT ODD CHARACTER AT THE END, IT IS NEEDED FOR SOME GOD AWFUL REASON
 		emitter.emit("websocketReady", true);
 	});
-	socket.on("close", () => {
+	socket.once("close", () => {
 		if (refreshing) {
 			initaliseWebsocketConnection(token);
 		} else {
@@ -41,8 +41,8 @@ export async function initaliseWebsocketConnection(token: string) {
 			}
 			initaliseWebsocketConnection(token);
 		}
-	})
-	socket.on("message", (data: any) => {
+	});
+	socket.on("message", (data: any) => { // Should be data: Buffer but causes type errors and I cannot be bothered with that :sob:
 		let sanitised = data.slice(0, data.toString().length - 1); // Remove the extra character at the end of the message, thanks Roblox :(
 		let json = JSON.parse(sanitised);
 		emitter.emit("websocketRaw", json);
@@ -51,7 +51,7 @@ export async function initaliseWebsocketConnection(token: string) {
 		if (json.target === "notification" && json.arguments[0] === "PresenceBulkNotifications") {
 			emitter.emit("presenceChanged", JSON.parse(json.arguments[1])[0].UserId);
 		}
-	})
+	});
 
 	return socket;
 }

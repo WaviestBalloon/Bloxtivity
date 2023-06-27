@@ -8,67 +8,61 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const presenceCache: { [key: string]: any } = {};
 
-if (process.platform === "linux") console.warn("Linux support might be a bit wonky, I've tried doing testing on my own system.\nPlease do open a Issue on GitHub if you have any issues with Bloxtivity!\nI will try my best to help you out.\n\thttps://github.com/WaviestBalloon/Bloxtivity/issues\n");
-if (process.platform === "darwin") console.warn("Mac support has not been tested by me at all!\nPlease do open a Issue on GitHub if you have any issues with Bloxtivity!\n\thttps://github.com/WaviestBalloon/Bloxtivity/issues\n");
+const helpMessage = "\nPlease do open a Issue on GitHub if you have any issues with Bloxtivity!\nI will try my best to help you out.\n\thttps://github.com/WaviestBalloon/Bloxtivity/issues\n"
+if (process.platform === "win32") console.warn("Windows support has some issues regarding toasts, sometimes SnoreToast will refuse to show images with " + helpMessage);
+if (process.platform === "linux") console.warn("Linux support might be a bit wonky, I've tried doing testing on my own system." + helpMessage);
+if (process.platform === "darwin") console.warn("Mac support has not been tested by me at all!" + helpMessage);
 if (!process.env.TOKEN) throw new Error("No .ROBLOSECURITY token provided in .env file!\nDo the following: \n\t- Head to your Roblox homepage: https://roblox.com/\n\t- Open up the Developer Tools (F12 / Ctrl + Shift + I)\n\t- Go to the Storage tab\n\t- Go to Cookies and find the roblox.com domain\n\t- Find the .ROBLOSECURITY cookie and copy the value");
+
+let presenceCache: { [key: string]: any } = {};
+const profilePictureSizeConstraint = process.platform === "linux" || process.platform === "darwin" ? 100 : 48; // Linux can handle larger images, but Windows can't - An attempt to prevent the "size <= 200kb These limitations are due to the Toast notification system." error
+const staticHeaders = {
+	"Content-Type": "application/json",
+	"Accept": "application/json",
+	"Cookie": `.ROBLOSECURITY=${process.env.TOKEN}`,
+}
+console.log(`Profile size constraint: ${profilePictureSizeConstraint}x${profilePictureSizeConstraint} (Windows? ${process.platform === "win32" ? "Yes, limited picture dimensions are being used" : "No, larger picture dimensions are being used (Because Linux is chad)"})`)
 
 existsSync(join(__dirname, "..", "temp")) || mkdirSync(join(__dirname, "..", "temp"));
 
 await initaliseWebsocketConnection(process.env.TOKEN);
+
 let axiosClient = axios.create({
 	headers: {
-		"Content-Type": "application/json",
-		"Accept": "application/json",
-		"Cookie": `.ROBLOSECURITY=${process.env.TOKEN}`,
+		"X-CSRF-TOKEN": await generateCSRFToken(),
+		... staticHeaders,
 	}
 });
+
 async function generateCSRFToken() {
 	let CSRFToken: string = null;
-	console.log(axiosClient.defaults.headers);
-	await axiosClient.post("https://auth.roblox.com/v2/logout").catch(err => {
+	const tempAxiosClient = axios.create({ headers: staticHeaders });
+	//console.log(axiosClient.defaults.headers);
+	console.log("Generating CSRF token");
+	await tempAxiosClient.post("https://auth.roblox.com/v2/logout").catch(err => {
 		if (err.response?.status === 403) {
 			CSRFToken = err.response.headers["x-csrf-token"];
 			return;
 		}
 		console.warn(`An unknown error occurred while generating a CSRF token\nDetails: ${err.response.data.errors[0].message}`)
 	});
+	if (CSRFToken) console.log("CSRF token generated successfully (" + CSRFToken + ")");
 	return CSRFToken;
 }
-console.log("Generating CSRF token");
-axiosClient = axios.create({
-	headers: {
-		"Content-Type": "application/json",
-		"Accept": "application/json",
-		"X-CSRF-TOKEN": await generateCSRFToken(),
-		".ROBLOSECURITY": `.ROBLOSECURITY=${process.env.TOKEN}`,
-	}
-});
 setInterval(async () => {
 	console.log("Regenerating CSRF token");
-	axiosClient = axios.create({
-		headers: {
-			"Content-Type": "application/json",
-			"Accept": "application/json",
-			".ROBLOSECURITY": `.ROBLOSECURITY=${process.env.TOKEN}`,
-		}
-	});
 	let CSRFToken: string = await generateCSRFToken();
 	axiosClient = axios.create({
 		headers: {
-			"Content-Type": "application/json",
-			"Accept": "application/json",
 			"X-CSRF-TOKEN": CSRFToken,
-			".ROBLOSECURITY": `.ROBLOSECURITY=${process.env.TOKEN}`,
+			... staticHeaders,
 		}
 	});
 }, 1000 * 60 * 5);
 
 
-emitter.on("websocketReady", async (data) => {
-	console.log("Websocket has been initialised!");
-});
+emitter.once("websocketReady", async (data) => { console.log("Websocket has been initialised!"); });
 emitter.on("presenceChanged", async (userId) => {
 	console.log(`Presence changed for user ${userId}`);
 	const cached = presenceCache[userId];
@@ -81,7 +75,7 @@ emitter.on("presenceChanged", async (userId) => {
 	console.log(`Getting user info for user ${userId}`);
 	const userInfo = await axiosClient.get(`https://users.roblox.com/v1/users/${userId}`);
 	console.log(`Resolving icon for user ${userId}`);
-	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=100x100&format=Png&isCircular=false`);
+	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=${profilePictureSizeConstraint}x${profilePictureSizeConstraint}&format=Png&isCircular=false`);
 	console.log(`Downloading icon for user ${userId}`);
 	const profilePictureRaw = await axiosClient.get(profilePicture?.data?.data[0]?.imageUrl, { responseType: "arraybuffer" });
 	if (profilePictureRaw) await writeFileSync(join(__dirname, "..", "temp", `${userId}.png`), profilePictureRaw.data);
@@ -110,7 +104,7 @@ emitter.on("presenceChanged", async (userId) => {
 		console.log(gameInfo.data);
 	}*/
 	let message = null;
-	console.log(`Last: ${presence.data.userPresences[0].lastLocation}`);
+	console.log(presence.data.userPresences[0]);
 	presenceCache[userId] = {
 		lastLocation: presence.data.userPresences[0].lastLocation,
 		presenceType: presence.data.userPresences[0].userPresenceType,
