@@ -2,7 +2,7 @@
 Live notifications about your friend's activity on Roblox! Works on Windows and Linux.
 
 <p align="center">
-	<img src="gitassets/WindowsScreenshot.png" width=225px>
+	<img src="gitassets/WindowsScreenshot.png" width=285px>
 </p>
 
 ## Building and running
