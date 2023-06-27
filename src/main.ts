@@ -17,6 +17,7 @@ if (!process.env.TOKEN) throw new Error("No .ROBLOSECURITY token provided in .en
 
 let presenceCache: { [key: string]: any } = {};
 const profilePictureSizeConstraint = process.platform === "linux" || process.platform === "darwin" ? 100 : 48; // Linux can handle larger images, but Windows can't - An attempt to prevent the "size <= 200kb These limitations are due to the Toast notification system." error
+const circularProfilePictures = false; // If true, profile pictures will be circular, if false, they will be square
 const staticHeaders = {
 	"Content-Type": "application/json",
 	"Accept": "application/json",
@@ -75,7 +76,7 @@ emitter.on("presenceChanged", async (userId) => {
 	console.log(`Getting user info for user ${userId}`);
 	const userInfo = await axiosClient.get(`https://users.roblox.com/v1/users/${userId}`);
 	console.log(`Resolving icon for user ${userId}`);
-	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=${profilePictureSizeConstraint}x${profilePictureSizeConstraint}&format=Png&isCircular=false`);
+	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=${profilePictureSizeConstraint}x${profilePictureSizeConstraint}&format=Png&isCircular=${circularProfilePictures}`);
 	console.log(`Downloading icon for user ${userId}`);
 	const profilePictureRaw = await axiosClient.get(profilePicture?.data?.data[0]?.imageUrl, { responseType: "arraybuffer" });
 	if (profilePictureRaw) await writeFileSync(join(__dirname, "..", "temp", `${userId}.png`), profilePictureRaw.data);
@@ -149,16 +150,3 @@ emitter.on("presenceChanged", async (userId) => {
 		}
 	}
 });
-
-/*
-notifier.notify({
-	title: "WaviestBalloon is in-game",
-	message: "WaviestBalloon is now playing QS Energy Research Facility",
-	icon: join(__dirname, "test.png"),
-	closeLabel: 'Absolutely not',
-	actions: ['Yes', 'No'],
-});
-
-*/
-
-

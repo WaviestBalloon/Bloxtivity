@@ -8,7 +8,9 @@
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"builderman": "rm -rf ./dist/ ; npx tsc ; node .",
 		"build": "npx tsc",
-		"run": "node ."
+		"run": "node .",
+		"start": "node .",
+		"bloxtivity": "node ."
 	},
 	"author": "",
 	"license": "ISC",
