@@ -3,7 +3,7 @@ import notifier from "node-notifier";
 import axios from "axios";
 import { sendNotification } from "./utils/LinuxToast.js";
 import { initaliseWebsocketConnection, emitter } from "./utils/Websocket.js";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
@@ -79,7 +79,12 @@ emitter.on("presenceChanged", async (userId) => {
 	const profilePicture = await axiosClient.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=${profilePictureSizeConstraint}x${profilePictureSizeConstraint}&format=Png&isCircular=${circularProfilePictures}`);
 	console.log(`Downloading icon for user ${userId}`);
 	const profilePictureRaw = await axiosClient.get(profilePicture?.data?.data[0]?.imageUrl, { responseType: "arraybuffer" });
-	if (profilePictureRaw) await writeFileSync(join(__dirname, "..", "temp", `${userId}.png`), profilePictureRaw.data);
+	if (profilePictureRaw) writeFileSync(join(__dirname, "..", "temp", `${userId}.png`), profilePictureRaw.data);
+	let iconPath = join(__dirname, "..", "temp", `${userId}.png`);
+	if (statSync(iconPath).size > 200000 && process.platform === "win32") { // Windows can't handle images larger than 200kb, lol!
+		console.warn(`Profile picture for user ${userId} is too large (${statSync(iconPath).size} bytes), using replacement...`);
+		iconPath = join(__dirname, "..", "ErrorIcon.png");
+	}
 
 	let location
 	switch (presence.data.userPresences[0].userPresenceType) {
@@ -121,7 +126,7 @@ emitter.on("presenceChanged", async (userId) => {
 			sendNotification({
 				title: `${userInfo.data.name} ${location}`,
 				message: message,
-				icon: join(__dirname, "..", "temp", `${userId}.png`),
+				icon: iconPath,
 				appName: "Bloxtivity",
 				//actions: ["Join game", "View game page"],
 			});
@@ -130,22 +135,22 @@ emitter.on("presenceChanged", async (userId) => {
 				title: `${userInfo.data.name} ${location}`,
 				message: message,
 				sound: false,
-				icon: join(__dirname, "..", "temp", `${userId}.png`),
+				icon: iconPath,
 			});
 		}
 	} else {
 		if (process.platform === "linux") {
 			sendNotification({
 				title: `${userInfo.data.name} ${location}`,
-				icon: join(__dirname, "..", "temp", `${userId}.png`),
+				icon: iconPath,
 				appName: "Bloxtivity",
 			});
 		} else {
 			notifier.notify({
 				title: `${userInfo.data.name} ${location}`,
-				message: message,
+				message: " ", // Have to do more testing here, but this is a temporary fix
 				sound: false,
-				icon: join(__dirname, "..", "temp", `${userId}.png`),
+				icon: iconPath,
 			});
 		}
 	}
