@@ -21,7 +21,7 @@ TODO
 ## To-do list
 
 - [x] Improve CSRF token generation and handling
-- [ ] Do not display profile picture if it's too large to be handled by Windows
+- [x] Do not display profile picture if it's too large to be handled by Windows
 - [ ] Join game instance button
 - [ ] View game page button
 - [ ] Make cache useful/Compare checksums
