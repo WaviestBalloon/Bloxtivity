@@ -25,3 +25,4 @@ TODO
 - [ ] Join game instance button
 - [ ] View game page button
 - [ ] Make cache useful/Compare checksums
+- [ ] Playtime counter after game leave
